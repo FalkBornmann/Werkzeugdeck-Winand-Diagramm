@@ -6,10 +6,10 @@ Interaktives Lehrtool für Werkzeugdeck: https://werkzeugdeck.pages.dev/tools/wi
 
 - Zustände unabhängig vergleichen oder einen mehrstufigen Prozess vom ausgewählten Zustand starten.
 - Drei wählbare Ebenen: einfacher Elektrolyt; generische Komplexierung mit Temperatur/pH; Mehrkomponentenbad mit zwei Glanzbildner-Wirkklassen, Beschleuniger, Netzmittel und Puffer.
-- Zehn Modellbeispiele einschließlich Gefügeübergängen und acht Prozessszenarien, frei bearbeitbare Schritte mit Rampe, Sprung und Haltephase.
+- Zwölf Modellbeispiele einschließlich Gefügeübergängen und zehn Prozessszenarien, frei bearbeitbare Schritte mit Rampe, Sprung und Haltephase.
 - Quasistationärer Parameterpfad oder Zeitmodell mit Transport-/Adsorptionsverzögerung, Faraday-Schichtwachstum und optionaler Metallbilanz eines endlichen Bades.
 - Winandkarte (Inhibierung wächst nach unten), qualitative Gefügeskizzen, Schichthistorie und Schichtdickenverlauf.
-- Lokale PNG- und echte SVG-Exporte für alle drei Darstellungen; CSV-Werte und JSON-Projekte zum Wiederladen.
+- Lokale PNG- und echte SVG-Exporte für alle vier Darstellungen; CSV-Werte und JSON-Projekte zum Wiederladen.
 
 ## Fachliche Einordnung
 
@@ -41,7 +41,7 @@ Alle Berechnungen und Exporte erfolgen auf dem Gerät im Browser. Keine externen
 - Standardmäßig druckfreundliche Vektorschraffuren; Farbe lässt sich optional einschalten. PNG und SVG übernehmen denselben Darstellungszustand.
 - „Neuen Zustand anlegen“ erzeugt einen unabhängigen Schnappschuss. Namen: Ausgangszustand, Zustand 2, Zustand 3 usw. Kurzzeichen: AZ, Z2, Z3, …, EZ für den letzten Vergleichszustand. Zwischenzustände bleiben editierbar; zusätzliche Namen sind optional.
 - Die Simulation hat einen getrennt gewählten festen Startzustand. Der laufende Punkt ist eine Raute und überschreibt keine gespeicherten Zustände. Änderungen am gewählten Startzustand berechnen den Prozess neu; die reine Editor-Auswahl oder das Ändern anderer Zustände ändert seinen Start nicht.
-- Projektformat v2 speichert Prozessstart und Druckansicht. v1-Dateien bleiben importierbar und werden zunächst an AZ gebunden.
+- Projektformat v3 speichert zusätzlich die Netzmittel- und Pufferwirkmodelle. v1/v2 bleiben importierbar und werden neu berechnet; nur v1 wird zunächst an AZ gebunden.
 
 ## Übergangsgefüge und Spitzenwachstum
 
@@ -50,3 +50,9 @@ Grenznahe Punkte erhalten zusätzliche Lehrhinweise und Vektorskizzen: Zwillings
 Im FI-Umfeld ergänzen frei gesetzte Lehrregeln Nadeln/Whisker und verzweigte Dendriten als mögliche Formen. Diese Hinweise ändern weder die Hauptgebietszuordnung noch den begrenzten Metallteilstrom oder die Faraday-Schichtrechnung. Es werden keine Dendritenwahrscheinlichkeit, Astgrößen, Einsatzschwellen oder Zwillingsgesetze vorhergesagt. Quellen und Grenzen stehen im Theorieabschnitt.
 
 Neue direkte Beispiele: BR/FT mit möglichem Z, FT/UD-Mischgefüge, prismatische Spitzen und mögliche Dendriten. Das zusätzliche Stromrampenszenario zeigt den Wechsel dieser Anschauungsformen. CSV ergänzt die Lehrhinweise; die Zeitmodell-Historie bewahrt sie mit schraffierten bzw. gepunkteten Randspuren in PNG und SVG.
+
+## Netzmittel, Puffer und Oberflächenbild
+
+Ebene 3 koppelt lokale pH-Verschiebung, pH-abhängige Hemmung, Metall-/H₂-Teilstrom und Blasenblockierung. Netzmittel können nur die Benetzung/Blasenablösung verbessern oder zusätzlich adsorptiv hemmen. Puffer können den pH stabilisieren, im Nickel/Borat-Lehrmodell zusätzlich die Wasserstoffreaktion hemmen oder als Protonendonoren die Wasserstoffreaktion fördern. Dies sind wählbare Mechanismen mit frei gesetzten Koeffizienten, keine universellen Stoffeigenschaften oder kalibrierte Kinetik. Der Reststrom wird vereinfachend vollständig H₂ zugeordnet. Ebenen 1/2 behalten ihre Basisrechnung.
+
+Eine zusätzliche schematische Draufsicht illustriert Körnung, mögliche Blasenfehlstellen und qualitative Glanztendenz der neu entstehenden Oberfläche. Sie liefert weder Lochdichte noch Glanzwerte in GU und berechnet keine kumulative Schädigung. PNG und echte SVG übernehmen den ausgewählten Zustand und die Druck-/Farbansicht; CSV enthält die gekoppelten Modellgrößen. Im Zeitmodell reagieren pH und Additivbelegung verzögert. Die Fachquellen und alle Modellannahmen stehen in der Anwendung.

@@ -1,4 +1,4 @@
-import {classify,boundaries,geometry,morphologyInfo} from './model.js';
+import {classify,boundaries,geometry,morphologyInfo,surfaceInfo} from './model.js';
 import {stateCode} from './workspace.js';
 export const escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 export const colors={FI:'#c5d5ce',BR:'#ddc99e',FT:'#acd2ce',UD:'#cfbdd5',LOW:'#e9e7dc',LIMIT:'#eac8bb',OFF:'#ecefed',OUT:'#fffdf8'};
@@ -155,4 +155,34 @@ export function historySVG(process,index){
  b+=text(30,450,'Randspuren: schraffiert = Übergang · gepunktet = Spitzen / Dendritenhinweis','font-size="12"');
  b+=text(30,405,'Historie der Modellbedingungen; keine Simulation von Umkristallisation oder realer Kornentwicklung.','font-size="12"');
  return root(850,475,'Zeitabhängige Modellschicht und Schichtdickenverlauf',b);
+}
+
+export function surfaceSVG(s,label='Aktiver Zustand',options={}){
+ const v=surfaceInfo(s),mono=options.monochrome!==false,base=mono?'#d0d0d0':s.metal==='copper'?'#ca9878':s.metal==='zinc'?'#b7c7cc':'#c4c8c9';
+ let b=text(25,28,'Schematische Oberflächenstruktur','font-size="19" font-weight="700"')+text(25,50,label.length>50?label.slice(0,49)+'…':label,'font-size="12"');
+ b+='<defs><clipPath id="surface-clip"><rect x="35" y="88" width="370" height="220" rx="3"/></clipPath></defs>';
+ b+=`<rect x="35" y="88" width="370" height="220" rx="3" fill="${base}" stroke="#344d41"/>`;
+ if(s.type==='OFF'){
+  b+=text(220,193,'Keine neue Abscheidung','text-anchor="middle" font-weight="700"')+text(25,350,'Vorhandene Oberflächen werden nicht rekonstruiert.','font-size="12"');
+  return root(440,405,'Oberfläche ohne neue Abscheidung',b);
+ }
+ b+=text(220,74,'Draufsicht · Körnung, Reflexion und mögliche Blasenporen','text-anchor="middle" font-size="11"');
+ b+='<g clip-path="url(#surface-clip)">';
+ const nx=9,ny=5,nodes=[];
+ for(let r=0;r<=ny;r++){nodes[r]=[];for(let c=0;c<=nx;c++)nodes[r][c]=[35+c*370/nx+(c>0&&c<nx?Math.sin(c*7+r*3)*7:0),88+r*220/ny+(r>0&&r<ny?Math.sin(c*3+r*11)*7:0)];}
+ for(let r=0;r<ny;r++)for(let c=0;c<nx;c++){
+  const pts=[nodes[r][c],nodes[r][c+1],nodes[r+1][c+1],nodes[r+1][c]],shade=Math.sin(r*9+c*6),opacity=.03+v.roughness*.25;
+  b+=`<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${shade>0?'white':'#333'}" fill-opacity="${opacity*Math.abs(shade)}" stroke="#4c5050" stroke-opacity="${.05+.55*v.roughness}" stroke-width="${.2+1.4*v.roughness}"/>`;
+ }
+ // Highlight geometry is a teaching cue, not ray tracing or a gloss measurement.
+ b+=`<path d="M70,310 L260,88 M150,310 L340,88" fill="none" stroke="white" stroke-width="${4+30*v.sheen}" stroke-opacity="${.04+.5*v.sheen}"/>`;
+ const count=Math.round(v.pits*25);
+ for(let i=0;i<count;i++){
+  const x=52+(((i*97+31)%331)),y=104+((i*73+19)%183),r=3+7*v.pits+2*(1+Math.sin(i*4));
+  b+=`<g data-surface-pit="${i}"><circle cx="${x}" cy="${y}" r="${r}" fill="#f8f8f4" stroke="#303836" stroke-width="1.4"/><ellipse cx="${x+1}" cy="${y+1.5}" rx="${r*.7}" ry="${r*.6}" fill="#515958" fill-opacity=".6"/><path d="M${x-r*.6},${y-r*.35} Q${x},${y-r} ${x+r*.6},${y-r*.35}" fill="none" stroke="white" stroke-width="1.2"/></g>`;
+ }
+ b+='</g>';
+ b+=text(25,335,'Textur: '+v.texture,'font-size="14" font-weight="700"')+text(25,358,'Glanz-Tendenz: '+v.gloss,'font-size="14" font-weight="700"');
+ b+=text(25,382,'Neue Schicht · keine Lochdichte, kein Glanzwert in GU','font-size="11"');
+ return root(440,405,'Qualitative Oberflächentendenz: '+v.texture+', '+v.gloss,b);
 }

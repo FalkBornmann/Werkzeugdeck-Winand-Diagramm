@@ -2,7 +2,7 @@ import {defaults} from './model.js';
 export const stateCode=(i,count)=>i===0?'AZ':i===count-1?'EZ':`Z${i+1}`;
 export const stateName=i=>i===0?'Ausgangszustand':`Zustand ${i+1}`;
 export const stateTitle=(s,i,count)=>`${stateCode(i,count)} · ${stateName(i)}${s.name?' — '+s.name:''}`;
-export function cloneState(s){return {name:s.name||'',p:{...s.p}};}
+export function cloneState(s){return {name:s.name||'',p:{...defaults,...s.p}};}
 // Every mutation replaces exactly one snapshot. A separately selected process origin
 // never follows the editor's active state. No simulation writes to saved snapshots.
 export class StateBook {

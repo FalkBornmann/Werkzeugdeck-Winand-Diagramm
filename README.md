@@ -6,7 +6,7 @@ Interaktives Lehrtool für Werkzeugdeck: https://werkzeugdeck.pages.dev/tools/wi
 
 - Zustände unabhängig vergleichen oder einen mehrstufigen Prozess vom ausgewählten Zustand starten.
 - Drei wählbare Ebenen: einfacher Elektrolyt; generische Komplexierung mit Temperatur/pH; Mehrkomponentenbad mit zwei Glanzbildner-Wirkklassen, Beschleuniger, Netzmittel und Puffer.
-- Sechs Modellbad-Beispiele und sieben Prozessszenarien, frei bearbeitbare Schritte mit Rampe, Sprung und Haltephase.
+- Zehn Modellbeispiele einschließlich Gefügeübergängen und acht Prozessszenarien, frei bearbeitbare Schritte mit Rampe, Sprung und Haltephase.
 - Quasistationärer Parameterpfad oder Zeitmodell mit Transport-/Adsorptionsverzögerung, Faraday-Schichtwachstum und optionaler Metallbilanz eines endlichen Bades.
 - Winandkarte (Inhibierung wächst nach unten), qualitative Gefügeskizzen, Schichthistorie und Schichtdickenverlauf.
 - Lokale PNG- und echte SVG-Exporte für alle drei Darstellungen; CSV-Werte und JSON-Projekte zum Wiederladen.
@@ -42,3 +42,11 @@ Alle Berechnungen und Exporte erfolgen auf dem Gerät im Browser. Keine externen
 - „Neuen Zustand anlegen“ erzeugt einen unabhängigen Schnappschuss. Namen: Ausgangszustand, Zustand 2, Zustand 3 usw. Kurzzeichen: AZ, Z2, Z3, …, EZ für den letzten Vergleichszustand. Zwischenzustände bleiben editierbar; zusätzliche Namen sind optional.
 - Die Simulation hat einen getrennt gewählten festen Startzustand. Der laufende Punkt ist eine Raute und überschreibt keine gespeicherten Zustände. Änderungen am gewählten Startzustand berechnen den Prozess neu; die reine Editor-Auswahl oder das Ändern anderer Zustände ändert seinen Start nicht.
 - Projektformat v2 speichert Prozessstart und Druckansicht. v1-Dateien bleiben importierbar und werden zunächst an AZ gebunden.
+
+## Übergangsgefüge und Spitzenwachstum
+
+Grenznahe Punkte erhalten zusätzliche Lehrhinweise und Vektorskizzen: Zwillings-Zwischentyp Z zwischen BR und FT (für Kupfer/Nickel als mögliche Anschauung), allgemeine BR/FT-Mischbilder für Zink sowie Mischskizzen für weitere Hauptgebietsgrenzen. Die Nähe wird grafisch mit Radius 0,03 in (x, H/100) bestimmt; das ist kein validiertes Koexistenzband.
+
+Im FI-Umfeld ergänzen frei gesetzte Lehrregeln Nadeln/Whisker und verzweigte Dendriten als mögliche Formen. Diese Hinweise ändern weder die Hauptgebietszuordnung noch den begrenzten Metallteilstrom oder die Faraday-Schichtrechnung. Es werden keine Dendritenwahrscheinlichkeit, Astgrößen, Einsatzschwellen oder Zwillingsgesetze vorhergesagt. Quellen und Grenzen stehen im Theorieabschnitt.
+
+Neue direkte Beispiele: BR/FT mit möglichem Z, FT/UD-Mischgefüge, prismatische Spitzen und mögliche Dendriten. Das zusätzliche Stromrampenszenario zeigt den Wechsel dieser Anschauungsformen. CSV ergänzt die Lehrhinweise; die Zeitmodell-Historie bewahrt sie mit schraffierten bzw. gepunkteten Randspuren in PNG und SVG.

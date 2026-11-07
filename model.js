@@ -24,7 +24,11 @@ export const presets = [
  {name:'Komplexiert · generisches Kupfer-Modell',values:{...defaults,level:2,ligand:0.7,strength:5,labile:0.6}},
  {name:'Mehrkomponentenbad · Kupfer-Modell',values:{...defaults,level:3,ligand:0.3,suppressor:45,brightener:30,accelerator:15,wetting:60,buffer:60}},
  {name:'Mehrkomponentenbad · Nickel-Modell',values:{...defaults,level:3,metal:'nickel',ph:4.5,suppressor:35,brightener:40,wetting:50,buffer:75}},
- {name:'Einfach · Zink-Modell',values:{...defaults,metal:'zinc',concentration:0.3}}
+ {name:'Einfach · Zink-Modell',values:{...defaults,metal:'zinc',concentration:0.3}},
+ {name:'Übergang BR/FT · mögliche Zwillinge Z',values:{...defaults,level:3,current:4.8,suppressor:20}},
+ {name:'Übergang FT/UD · Mischgefüge',values:{...defaults,level:3,current:4.8,suppressor:80}},
+ {name:'FI · prismatische Spitzen / Whisker',values:{...defaults,current:10.6}},
+ {name:'FI · Dendriten als mögliche Wachstumsform',values:{...defaults,current:16}}
 ];
 export const scenarios = [
  {name:'Stofftransport stetig erhöhen',parameter:'transport',target:70,duration:180,ramp:'linear',why:'Bei gleicher Stromdichte wächst der Grenzstrom. Der Pfad wandert zu kleineren j/jgrenz.'},
@@ -33,6 +37,7 @@ export const scenarios = [
  {name:'Inhibitor dosieren',parameter:'suppressor',target:80,duration:180,ramp:'linear',why:'Die qualitative Hemmung steigt. Im Zeitmodell folgt die Oberflächenbelegung verzögert.'},
  {name:'Komplexierung verstärken',parameter:'ligand',target:1.3,duration:180,ramp:'linear',why:'Freie Spezies und die Nachlieferung aus Komplexen bestimmen gemeinsam den Modell-Grenzstrom.'},
  {name:'Transportausfall und Erholung',steps:[{parameter:'transport',target:3,duration:90,ramp:'jump'},{parameter:'transport',target:50,duration:180,ramp:'jump'}],why:'Ein sprunghafter Eingriff zeigt verzögerte Transportantwort und unterschiedliche abgeschiedene Lagen.'},
+ {name:'Von isolierten Kristallen zu möglichen Dendriten',parameter:'current',target:17,duration:180,ramp:'linear',why:'Bei geringer Hemmung zeigt das FI-Lehrbild mit wachsender Transportbeanspruchung erst Spitzen, dann mögliche Verzweigung. Dies ist keine berechnete Einsatzschwelle für Dendriten.'},
  {name:'Stromstufe und Erholungsphase',steps:[{parameter:'current',target:8,duration:90,ramp:'jump'},{parameter:'current',target:0.5,duration:180,ramp:'jump'}],why:'Hohe Stromdichte kann die Metallzufuhr überfordern. Danach wächst die Schicht unter anderen Bedingungen weiter.'}
 ];
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -79,6 +84,40 @@ export function classify(x,y,j=1) {
  if(y<b.ud)return 'FT';
  return 'UD';
 }
+// Transition proximity: a purely graphical neighbourhood of radius 0.03 in
+// normalized plot coordinates (x, H/100), not a physical coexistence band.
+export const transitionRadius=0.03;
+export function morphologyInfo(s) {
+ const x=s.ratio,y=s.inhibition,type=s.type||classify(x,y);
+ const empty={transition:null,growth:'ordinary',growthTitle:'',growthText:''};
+ if(type==='OFF'||!Number.isFinite(x)||!Number.isFinite(y))return empty;
+ let transition=null;
+ if(!['OUT','LIMIT'].includes(type)){
+  const adjacent=new Set([type]);
+  for(let i=0;i<24;i++){
+   const angle=i*Math.PI/12,nx=x+transitionRadius*Math.cos(angle),ny=y+100*transitionRadius*Math.sin(angle);
+   if(nx<0||nx>=1||ny<0||ny>100)continue;
+   const other=classify(nx,ny);if(!['OUT','LIMIT','OFF'].includes(other))adjacent.add(other);
+  }
+  if(adjacent.size>1){
+   const types=[...adjacent].sort(),has=(a,b)=>adjacent.has(a)&&adjacent.has(b);
+   if(has('BR','FT'))transition={key:'BR-FT',types,sketch:s.metal==='zinc'?'mixed':'twins',title:s.metal==='zinc'?'BR ↔ FT · mögliche Übergangsform':'BR ↔ FT · Zwillings-Zwischentyp Z möglich',text:s.metal==='zinc'?'Am schematischen Übergang können Merkmale von Basisreproduktion und feldorientiertem Wachstum nebeneinander vorkommen. Für Zink wird hier kein bestimmtes Zwillingsgesetz zugeordnet.':'Fischer/Winand beschreiben Z als möglichen Zwischentyp zwischen BR und FT. Die Skizze zeigt spiegelbildliche Orientierungen an Zwillingsgrenzen. Die Lage nahe einer gezeichneten Linie beweist keine reale Zwillingsbildung; Zwillinge können auch außerhalb dieses Übergangs auftreten.'};
+   else if(has('FT','UD'))transition={key:'FT-UD',types,sketch:'mixed',title:'FT ↔ UD · säulenartiges und feines Mischgefüge',text:'Die Lehrskizze kombiniert längliche Körner mit neu gebildeten, unterschiedlich orientierten Körnern. Sie illustriert einen graduellen Wechsel der Wachstumsmerkmale, kein berechnetes Phasengemisch und keinen Kornanteil.'};
+   else if(has('FI','BR'))transition={key:'BR-FI',types,sketch:'mixed',title:'BR ↔ FI · grobe Körner mit einzelnen Spitzen',text:'Aus einem gröberen zusammenhängenden Gefüge können einzelne Kristalle hervorragen. Winand beschreibt auch eine zeitliche Aufrauung von BR bis zu FI. Das Tool berechnet diese Alterung nicht allein aus der Position.'};
+   else if(has('FI','FT'))transition={key:'FI-FT',types,sketch:'mixed',title:'FI ↔ FT · isolierte und zusammenwachsende Säulen',text:'Die Skizze stellt isolierte Wachstumsformen neben stärker geschlossenem säulenartigem Wachstum dar. Eine allgemeingültige besondere Kristallstruktur an dieser Linie ist nicht festgelegt.'};
+   else if(has('LOW','BR'))transition={key:'LOW-BR',types,sketch:'mixed',title:'FI / geringe Bedeckung ↔ BR · Inseln wachsen zusammen',text:'Eine mögliche Anschauung sind zunächst getrennte Kristallinseln und ihre zunehmende Verbindung. Bedeckungsgrad und reale Koaleszenz werden hier nicht zeitlich berechnet.'};
+   else transition={key:'mixed',types,sketch:'mixed',title:'Übergangsbereich · gemischte Wachstumsmerkmale',text:'Nahe einer schematischen Linie werden Merkmale benachbarter Typen nebeneinander gezeigt. Es wird keine eigene gesicherte Gefügeklasse vorhergesagt.'};
+  }
+ }
+ let growth='ordinary',growthTitle='',growthText='';
+ if(type==='FI'&&x>=0.5&&y<=35){
+  growth=x>=0.7?'dendritic':'needles';
+  growthTitle=growth==='dendritic'?'Mögliches dendritisches Wachstum':'Mögliche prismatische Spitzen / Whisker';
+  growthText=growth==='dendritic'?'Vorsprünge können mehr Ionenfluss als ihre Umgebung erhalten und sich weiter verzweigen. Die Skizze zeigt Stamm, Seitenäste und aktive Spitzen; keine vorausgesagte Astlänge oder Wachstumszeit.':'Geringe Hemmung kann das Hervortreten einzelner Kristalle begünstigen. Die Skizze unterscheidet unverzweigte Nadeln von verzweigten Dendriten.';
+ }else if(type==='LIMIT'&&y<=35){growth='transport-warning';growthTitle='Transportlimit · Spitzenwachstum möglich';growthText='Bei knappem Stoffnachschub kann lokalisierter Fluss das Wachstum von Vorsprüngen verstärken. Außerhalb des Kartenkerns wird nur eine mögliche Instabilität illustriert, kein gesicherter Dendritenzustand zugeordnet.';}
+ if(growth!=='ordinary')growthText+=' Die Auswahl bei x ≥ 0,5 bzw. 0,7 und H ≤ 35 ist eine frei gesetzte Lehrregel, keine experimentell gültige Grenze oder Wahrscheinlichkeit. Dendriten hängen zusätzlich von Metall, Konzentration, Kinetik, Oberfläche, Zeit und lokaler Strömung ab.';
+ return {transition,growth,growthTitle,growthText};
+}
 export function state(p,dynamic={}) {
  const e=equilibrium(p),q=e.q,m=metals[q.metal];
  const c=dynamic.concentration??q.concentration, k=dynamic.transport??q.transport;
@@ -96,7 +135,7 @@ export function state(p,dynamic={}) {
  if(ratio>1) warnings.push('Die Karte endet bei j/jgrenz = 1. Die Gesamtstromvorgabe liegt darüber und wird mit ihrem tatsächlichen Zahlenwert am rechten Rand markiert.');
  if(c<0.01) warnings.push('Bad nahezu erschöpft: Modell außerhalb des vorgesehenen Konzentrationsbereichs.');
  if(q.current===0) warnings.push('Strom ausgeschaltet: kein Schichtwachstum. Die Hemmungskoordinate ist nur ein Modellwert.');
- return {ratio,inhibition:y,limit,free:e.free,available:e.available,coverage:cover,concentration:c,transport:k,ph,efficiency:deposited/(q.current||1),rate,side,bubble,type:classify(ratio,y,q.current),warnings};
+ return {metal:q.metal,ratio,inhibition:y,limit,free:e.free,available:e.available,coverage:cover,concentration:c,transport:k,ph,efficiency:deposited/(q.current||1),rate,side,bubble,type:classify(ratio,y,q.current),warnings};
 }
 export function validateStep(s) {
  const f=fields[s?.parameter];
@@ -127,7 +166,7 @@ export function simulate(start,steps,mode='path') {
     dyn.ph=eq.q.ph+dpH*(1-Math.exp(-(t+dt)/60));
     s=state(p,dyn);
     const dh=s.rate*dt;
-    if(dh>0)layers.push({bottom:thickness,top:thickness+dh,type:s.type,t:t+dt});
+    if(dh>0){const detail=morphologyInfo(s);layers.push({bottom:thickness,top:thickness+dh,type:s.type,transition:detail.transition?.key||'',growth:detail.growth,t:t+dt});}
     thickness+=dh;
     if(p.closed)removed+=s.rate*1e-6*metals[p.metal].rho*(p.area*1e-4)*dt/metals[p.metal].M/(p.volume*1e-3)/1000;
    }

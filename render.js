@@ -1,4 +1,4 @@
-import {classify,boundaries,geometry} from './model.js';
+import {classify,boundaries,geometry,morphologyInfo} from './model.js';
 import {stateCode} from './workspace.js';
 export const escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 export const colors={FI:'#c5d5ce',BR:'#ddc99e',FT:'#acd2ce',UD:'#cfbdd5',LOW:'#e9e7dc',LIMIT:'#eac8bb',OFF:'#ecefed',OUT:'#fffdf8'};
@@ -64,39 +64,84 @@ export function diagramSVG(states,active,process=null,index=0,options={}){
  b+=text(105,908,'2D / 3D: schematische Keimbildung · Gebiete sind keine gemessenen Phasengrenzen.','font-size="12"');
  return root(900,930,'Winanddiagramm mit Achsen links und oben, getrennten Gebieten und unabhängigen Zuständen',b);
 }
-export function morphologySVG(s,label='Aktiver Zustand'){
- let b=text(25,30,'Schematische Gefügeskizze','font-size="20" font-weight="700"')+text(25,53,label.slice(0,50),'font-size="13"');
- b+='<rect x="35" y="232" width="370" height="35" fill="#b6b2a1" stroke="#586e62"/>'+text(42,256,'Substrat','font-size="13"');
- if(['FT','BR'].includes(s.type)){
-  const cuts=[35,92,155,217,284,344,405];
-  for(let i=0;i<6;i++){
-   const y=s.type==='FT'?85+(i%2)*10:100+(i%3)*20;
-   b+=`<path d="M${cuts[i]},232 L${cuts[i]+4},${y} L${cuts[i+1]-4},${y-7} L${cuts[i+1]},232 Z" fill="${i%2?'#b1d5cd':'#d3e5da'}" stroke="#386659"/>`;
-   const x=(cuts[i]+cuts[i+1])/2;
-   b+=`<path d="M${x},205 l${s.type==='BR'?(i%3-1)*12:0},-65 m-5,8 l5,-8 l5,8" fill="none" stroke="#183f39" stroke-width="2"/>`;
-   if(s.type==='BR')b+=`<line x1="${cuts[i]}" x2="${cuts[i]+3}" y1="232" y2="267" stroke="#386659"/>`;
+function shortLines(value,max=46){const lines=[''];for(const word of value.split(' ')){const i=lines.length-1;if(lines[i]&&(lines[i]+' '+word).length>max)lines.push(word);else lines[i]+=(lines[i]?' ':'')+word;}return lines;}
+function grainScene(type,left,width){
+ let b=`<g transform="translate(${left} 0) scale(${width/370} 1)">`;
+ if(type==='FT'||type==='BR'){
+  const cuts=[0,57,120,182,249,309,370];
+  for(let i=0;i<6;i++){const top=type==='FT'?87+(i%2)*8:103+(i%3)*15,x=(cuts[i]+cuts[i+1])/2;
+   b+=`<path d="M${cuts[i]},235 L${cuts[i]+4},${top} L${cuts[i+1]-4},${top-7} L${cuts[i+1]},235 Z" fill="${i%2?'#e1eae4':'#f6f7ee'}" stroke="#344d41" stroke-width="1.4"/><path d="M${x},213 l${type==='BR'?(i%3-1)*12:0},-65 m-5,8 l5,-8 l5,8" fill="none" stroke="#223b30" stroke-width="2"/>`;
   }
- }else if(s.type==='UD'){
-  const nx=12,ny=6,verts=[];
-  for(let row=0;row<=ny;row++){verts[row]=[];for(let col=0;col<=nx;col++)verts[row][col]=[35+col*370/nx+(col>0&&col<nx?Math.sin(col*9+row*4)*6:0),82+row*150/ny+(row>0&&row<ny?Math.sin(col*4+row*7)*5:0)];}
+ }else if(type==='UD'){
+  const nx=10,ny=6,verts=[];
+  for(let row=0;row<=ny;row++){verts[row]=[];for(let col=0;col<=nx;col++)verts[row][col]=[col*370/nx+(col>0&&col<nx?Math.sin(col*9+row*4)*6:0),88+row*147/ny+(row>0&&row<ny?Math.sin(col*4+row*7)*5:0)];}
   for(let row=0;row<ny;row++)for(let col=0;col<nx;col++){
    const pts=[verts[row][col],verts[row][col+1],verts[row+1][col+1],verts[row+1][col]],cx=pts.reduce((a,v)=>a+v[0],0)/4,cy=pts.reduce((a,v)=>a+v[1],0)/4,ang=col*2.1+row*1.7;
-   b+=`<polygon points="${pts.map(v=>v.join(',')).join(' ')}" fill="${(col+row)%2?'#d8cbe0':'#e8dfeb'}" stroke="#685773" stroke-width=".8"/><line x1="${cx-7*Math.cos(ang)}" x2="${cx+7*Math.cos(ang)}" y1="${cy-7*Math.sin(ang)}" y2="${cy+7*Math.sin(ang)}" stroke="#685773"/>`;
+   b+=`<polygon points="${pts.map(v=>v.join(',')).join(' ')}" fill="${(col+row)%2?'#eeebef':'#fdfbfe'}" stroke="#4b4252" stroke-width="1.1"/><line x1="${cx-7*Math.cos(ang)}" x2="${cx+7*Math.cos(ang)}" y1="${cy-7*Math.sin(ang)}" y2="${cy+7*Math.sin(ang)}" stroke="#4b4252"/>`;
   }
- }else if(['FI','LOW'].includes(s.type)){
-  for(let i=0;i<5;i++){const x=65+i*73,y=85+(i%3)*28;b+=`<path d="M${x-20},232 L${x-13},${y+25} L${x},${y} L${x+17},${y+24} L${x+23},232 Z" fill="#c5d5ce" stroke="#386659"/><line x1="${x}" x2="${x}" y1="${y+20}" y2="220" stroke="#386659"/>`;}
- }else b+=text(220,145,s.type==='OFF'?'Kein weiteres Wachstum':'Keine Gefügeprognose','text-anchor="middle" font-weight="700"');
- b+=text(25,295,names[s.type],'font-weight="700"')+text(25,318,'Korngrenzen und Orientierung · nicht maßstäblich','font-size="12"');
- return root(440,340,'Qualitative Gefügeskizze: '+names[s.type],b);
+ }else{
+  const count=type==='LOW'?3:5;
+  for(let i=0;i<count;i++){const x=30+i*(310/(count-1)),top=type==='LOW'?160+(i%2)*15:90+(i%3)*25;
+   b+=`<path d="M${x-18},235 L${x-13},${top+25} L${x},${top} L${x+15},${top+24} L${x+21},235 Z" fill="#e8eee7" stroke="#344d41" stroke-width="1.5"/><line x1="${x}" x2="${x}" y1="${top+20}" y2="224" stroke="#344d41"/>`;
+  }
+ }
+ return b+'</g>';
+}
+function spikyScene(branching){
+ let b='';
+ for(let i=0;i<4;i++){
+  const x=70+i*96,top=82+(i%2)*18;
+  b+=`<path d="M${x-4},235 L${x-2},${top+12} L${x},${top} L${x+3},${top+12} L${x+5},235 Z" fill="#dfe7df" stroke="#243b2c" stroke-width="1.6"/>`;
+  if(branching)for(let j=0;j<3;j++){
+   const y=122+j*32+(i%2)*7,len=20+j*5;
+   b+=`<path d="M${x},${y+20} L${x-len},${y-5} M${x},${y+20} L${x+len},${y-5} M${x-len*.65},${y+4} l-13,-5 m13,5 l-2,-14 M${x+len*.65},${y+4} l13,-5 m-13,5 l2,-14" fill="none" stroke="#243b2c" stroke-width="2"/>`;
+  }
+ }
+ if(branching)b+=text(220,70,'Stamm · Seitenäste · wachsende Spitzen','text-anchor="middle" font-size="12"');
+ return b;
+}
+function twinScene(){
+ let b='';
+ for(let i=0;i<5;i++){
+  const x=35+i*74;
+  b+=`<path d="M${x},235 L${x+5},92 L${x+67},86 L${x+74},235 Z" fill="${i%2?'#f3efe3':'#e8eee7'}" stroke="#344d41" stroke-width="1.3"/>`;
+  for(const y of [113,187]){
+   const sign=y<150?-1:1,cx=x+37;
+   b+=`<path d="M${cx-11},${y+7*sign} L${cx+11},${y-7*sign} m-7,0 l7,0 l-2,7" fill="none" stroke="#243b2c" stroke-width="2"/>`;
+  }
+ }
+ b+='<path d="M35,155 H405" fill="none" stroke="#111" stroke-width="2" stroke-dasharray="7 4"/>';
+ b+=text(220,74,'Spiegelbildliche Orientierung (schematisch)','text-anchor="middle" font-size="12"');
+ return b;
+}
+export function morphologySVG(s,label='Aktiver Zustand'){
+ const detail=morphologyInfo(s),transition=detail.transition,hasGrowth=detail.growth!=='ordinary';
+ const title=hasGrowth?detail.growthTitle:transition?.title||names[s.type];
+ let b=text(25,28,'Schematische Gefügeskizze','font-size="20" font-weight="700"')+text(25,50,(label.length>50?label.slice(0,49)+'…':label),'font-size="12"');
+ let legend='Korngrenzen und Orientierung';
+ if(hasGrowth){b+=spikyScene(detail.growth!=='needles');legend=detail.growth==='needles'?'Unverzweigte Nadeln / prismatische Spitzen':'Verzweigte Vorsprünge · keine Größenprognose';}
+ else if(transition?.sketch==='twins'){b+=twinScene();legend='Gestrichelt: mögliche Zwillingsgrenze';}
+ else if(transition){
+  const types=transition.key==='FT-UD'?['FT','UD']:transition.key==='BR-FI'?['BR','FI']:transition.key==='FI-FT'?['FI','FT']:transition.key==='LOW-BR'?['LOW','BR']:transition.types.slice(0,2);
+  b+=grainScene(types[0],35,182)+grainScene(types[1],223,182);
+  b+=text(126,279,types[0],'text-anchor="middle" font-weight="700"')+text(314,279,types[1],'text-anchor="middle" font-weight="700"');
+  legend='Nebeneinander gezeigte Wachstumsmerkmale';
+ }else if(['FI','LOW','BR','FT','UD'].includes(s.type))b+=grainScene(s.type,35,370);
+ else b+=text(220,155,s.type==='OFF'?'Kein weiteres Wachstum':'Keine gesicherte Gefügezuordnung','text-anchor="middle" font-weight="700"');
+ b+='<rect x="35" y="235" width="370" height="25" fill="#c7c5bb" stroke="#4b554e"/>'+text(42,253,'Substrat','font-size="12"');
+ if(!transition||hasGrowth||transition.sketch==='twins')b+=text(220,279,legend,'text-anchor="middle" font-size="12"');
+ shortLines(title).slice(0,3).forEach((line,i)=>{b+=text(25,310+i*20,line,'font-size="15" font-weight="700"');});
+ b+=text(25,382,'Mögliche Anschauungsform · nicht maßstäblich','font-size="12"');
+ return root(440,405,'Qualitative Gefügeskizze: '+title,b);
 }
 export function historySVG(process,index){
  const r=process.records,current=r[index],total=Math.max(process.thickness,1e-8);let b=text(30,30,'Schichtgeschichte und Zeitverlauf','font-size="20" font-weight="700"');
  b+=text(30,56,`Auswahl: ${fmt(current.t,1)} s · Schichtdicke ${fmt(current.thickness,3)} µm`);
- b+='<rect x="45" y="300" width="180" height="24" fill="#b6b2a1"/>'+text(135,319,'Substrat','text-anchor="middle" font-size="12"');
+ b+='<defs><pattern id="layer-transition" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="white"/><path d="M-1,6 L6,-1 M4,8 L8,4" fill="none" stroke="#111" stroke-width="1"/></pattern><pattern id="layer-growth" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="white"/><circle cx="3" cy="3" r="1.1" fill="#111"/></pattern></defs><rect x="45" y="300" width="180" height="24" fill="#b6b2a1"/>'+text(135,319,'Substrat','text-anchor="middle" font-size="12"');
  // Aggregate adjacent same-type layers and clip at the selected deposition time.
  let group=null;const groups=[];
- for(const l of process.layers){if(l.t>current.t+1e-6)break;if(group&&group.type===l.type)group.top=l.top;else{group={...l};groups.push(group);}}
- for(const l of groups)b+=`<rect x="45" y="${300-l.top/total*220}" width="180" height="${Math.max(.05,(l.top-l.bottom)/total*220)}" fill="${colors[l.type]}" stroke="#555" stroke-width=".7"/>`;
+ for(const l of process.layers){if(l.t>current.t+1e-6)break;if(group&&group.type===l.type&&group.transition===l.transition&&group.growth===l.growth)group.top=l.top;else{group={...l};groups.push(group);}}
+ for(const l of groups){b+=`<rect x="45" y="${300-l.top/total*220}" width="180" height="${Math.max(.05,(l.top-l.bottom)/total*220)}" fill="${colors[l.type]}" stroke="#555" stroke-width=".7"/>`;if(l.transition)b+=`<rect x="45" y="${300-l.top/total*220}" width="8" height="${Math.max(.05,(l.top-l.bottom)/total*220)}" fill="url(#layer-transition)"/>`;if(l.growth&&l.growth!=='ordinary')b+=`<rect x="53" y="${300-l.top/total*220}" width="8" height="${Math.max(.05,(l.top-l.bottom)/total*220)}" fill="url(#layer-growth)"/>`;}
  b+=`<rect x="45" y="80" width="180" height="220" fill="none" stroke="#527467"/>`+text(135,350,'Wachstum nach oben ↑','text-anchor="middle" font-size="12"');
  const max=r.reduce((maximum,v)=>Math.max(maximum,v.thickness),1),X=t=>315+t/Math.max(process.totalTime,1)*480,Y=h=>300-h/max*220;
  let path='';const stride=Math.max(1,Math.ceil(r.length/400));
@@ -105,6 +150,8 @@ export function historySVG(process,index){
  b+=`<path d="M315,80 V300 H795" fill="none" stroke="#527467"/><path d="${path}" fill="none" stroke="#176659" stroke-width="3"/><circle cx="${X(current.t)}" cy="${Y(current.thickness)}" r="6" fill="#a46125"/>`;
  b+=text(315,320,'0 s')+text(795,320,`${fmt(process.totalTime,0)} s`,'text-anchor="end"')+text(310,72,`${fmt(max,2)} µm`)+text(555,350,'Zeit →','text-anchor="middle"');
  b+=text(30,382,'Lagenfarben: FI grau-grün · BR sand · FT türkis · UD violett · Grenze terrakotta · unzugeordnet weiß','font-size="12"');
+ const detail=morphologyInfo(current);b+=text(30,428,'Merkmal: '+(detail.growthTitle||detail.transition?.title||'keine Zusatzzuordnung'),'font-size="12"');
+ b+=text(30,450,'Randspuren: schraffiert = Übergang · gepunktet = Spitzen / Dendritenhinweis','font-size="12"');
  b+=text(30,405,'Historie der Modellbedingungen; keine Simulation von Umkristallisation oder realer Kornentwicklung.','font-size="12"');
- return root(850,430,'Zeitabhängige Modellschicht und Schichtdickenverlauf',b);
+ return root(850,475,'Zeitabhängige Modellschicht und Schichtdickenverlauf',b);
 }

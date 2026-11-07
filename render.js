@@ -37,15 +37,16 @@ export function diagramSVG(states,active,process=null,index=0,options={}){
  b+=curve('low',0,geometry.lowEnd)+curve('brBottom',0,geometry.junction)+curve('fiTop',geometry.fiStart,intersection)+curve('ud',0,cross)+curve('ud',cross,geometry.udEnd,true)+curve('envelope',0,geometry.envelopeEnd);
  b+=`<path data-axis="top-left" d="M105,850 V140 H815" fill="none" stroke="#24362e" stroke-width="2.5" marker-end="url(#axis-arrow)"/><line x1="105" x2="105" y1="140" y2="850" stroke="#24362e" stroke-width="2.5" marker-end="url(#axis-arrow)"/>`;
  for(let i=0;i<=5;i++){const x=i/5;b+=`<line x1="${X(x)}" x2="${X(x)}" y1="134" y2="140" stroke="#24362e"/>`+text(X(x),122,fmt(x,1),'text-anchor="middle"');}
- for(let y=0;y<=100;y+=20)b+=text(92,Y(y)+5,`${y}`,'text-anchor="end"')+`<line x1="99" x2="105" y1="${Y(y)}" y2="${Y(y)}" stroke="#24362e"/>`;
- b+=text(450,88,'|jvorgegeben| / jgrenz [1] →','text-anchor="middle" font-weight="700" font-size="17"')+text(32,485,'Grad der Inhibierung [rel. %] →','transform="rotate(90 32 485)" text-anchor="middle" font-weight="700" font-size="17"');
+ b+=text(92,Y(0)+6,'gering','text-anchor="end" font-size="12"')+text(92,Y(100),'stark','text-anchor="end" font-size="12"');
+ b+='<text data-axis-label="ratio" x="450" y="88" text-anchor="middle" font-weight="700" font-size="20"><tspan font-style="italic">i</tspan>/<tspan font-style="italic">i</tspan><tspan baseline-shift="sub" font-size="13">grenz</tspan></text>';
+ b+=text(35,485,'Grad der Inhibierung','data-axis-label="inhibition" transform="rotate(-90 35 485)" text-anchor="middle" font-weight="700" font-size="17"');
  for(const label of regionLabels)label.lines.forEach((line,i)=>{b+=text(X(label.x),Y(label.y)+(i-(label.lines.length-1)/2)*20,line,`data-region-label="${label.type}" text-anchor="middle" font-size="${label.type==='LOW'?16:24}" font-weight="750" paint-order="stroke" stroke="white" stroke-width="5" stroke-linejoin="round"`);});
  b+=text(X(.04),Y(64),'2D','font-size="17" font-weight="650" paint-order="stroke" stroke="white" stroke-width="4"')+text(X(.04),Y(82),'3D','font-size="17" font-weight="650" paint-order="stroke" stroke="white" stroke-width="4"');
  b+=text(X(.83),Y(79),'Keine Zuordnung','text-anchor="middle" font-size="13"')+text(X(.83),Y(82),'außerhalb der','text-anchor="middle" font-size="13"')+text(X(.83),Y(85),'Referenzgebiete','text-anchor="middle" font-size="13"');
  const dot=(s,label,isActive=false,attributes='',simulation=false)=>{
   const x=X(s.ratio),y=Y(s.inhibition),outside=s.ratio>1,anchor=s.ratio>.88?'end':'start',tx=s.ratio>.88?x-13:x+13,ty=simulation?(s.inhibition>94?y-30:y+28):(s.inhibition<4?y+25:y-13);
   const marker=outside?`<path d="M${x-10},${y-8} L${x},${y} L${x-10},${y+8} Z" fill="white" stroke="#111" stroke-width="2"/>`:simulation?`<path d="M${x},${y-9} L${x+9},${y} L${x},${y+9} L${x-9},${y} Z" fill="#111" stroke="white" stroke-width="2"/>`:`<circle cx="${x}" cy="${y}" r="7" fill="${isActive?'#111':'white'}" stroke="#111" stroke-width="2.5"/>`;
-  return `<g ${attributes}><title>${escape(label)}: j/jgrenz ${fmt(s.ratio,3)}, Hemmung ${fmt(s.inhibition,1)} %</title>${isActive?`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="#111" stroke-width="1.5"/>`:''}${marker}${text(tx,ty,label,`text-anchor="${anchor}" font-weight="700" font-size="14" paint-order="stroke" stroke="white" stroke-width="4" stroke-linejoin="round"`)}</g>`;
+  return `<g ${attributes}><title>${escape(label)}: j/jgrenz ${fmt(s.ratio,3)}, Hemmung ${fmt(s.inhibition,1)} (Modellskala)</title>${isActive?`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="#111" stroke-width="1.5"/>`:''}${marker}${text(tx,ty,label,`text-anchor="${anchor}" font-weight="700" font-size="14" paint-order="stroke" stroke="white" stroke-width="4" stroke-linejoin="round"`)}</g>`;
  };
  if(process){
   const r=process.records,stride=Math.max(1,Math.ceil(r.length/600));let d='',open=false;

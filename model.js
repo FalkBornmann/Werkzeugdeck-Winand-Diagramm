@@ -1,4 +1,4 @@
-export const VERSION = 1;
+export const VERSION = 2;
 export const F = 96485.33212;
 export const metals = {
   copper: {name:'Kupfer', z:2, M:0.063546, rho:8960, D:0.72e-9, baseline:0.10},
@@ -55,17 +55,28 @@ export function equilibrium(p) {
  const fine=q.brightener/(q.brightener+40), accel=q.accelerator/(q.accelerator+40);
  return {q,free,available,coverage,fine,accel};
 }
-// Schematic region boundaries. NOT fitted phase boundaries or validated industrial thresholds.
-export function boundaries(x) {return {brTop:10+37*Math.pow(clamp(x/0.72,0,1),0.8),brBottom:34+18*clamp(x/0.72,0,1),ud:78+16*Math.pow(clamp(x/1.2,0,1),1.5),fi:0.5+0.5*Math.pow(clamp(x,0,1.4)/1.4,0.8)};}
+// Schematic geometry following the topology of the supplied Winand illustration.
+// Coordinates are didactic normalized coordinates, NOT a numerical fit of measured boundaries.
+export const geometry={lowEnd:0.30,junction:0.55,fiStart:0.46,udEnd:0.78,envelopeEnd:0.96};
+export function boundaries(x) {
+ const u=clamp(x,0,1),junctionY=32*Math.pow((geometry.junction-geometry.fiStart)/0.42,0.45);
+ return {
+  low:u<=geometry.lowEnd?26*Math.sqrt(Math.max(0,1-(u/geometry.lowEnd)**2)):0,
+  brBottom:u<=geometry.junction?junctionY+(52-junctionY)*Math.pow(Math.max(0,1-(u/geometry.junction)**1.8),0.75):0,
+  fiTop:u>=geometry.fiStart?32*Math.pow((u-geometry.fiStart)/0.42,0.45):0,
+  ud:u<=geometry.udEnd?70*Math.pow(Math.max(0,1-(u/geometry.udEnd)**1.7),0.65):0,
+  envelope:u<=geometry.envelopeEnd?90*Math.pow(Math.max(0,1-(u/geometry.envelopeEnd)**2),1/2.3):0
+ };
+}
 export function classify(x,y,j=1) {
- if(j===0) return 'OFF';
- if(x>=1) return 'LIMIT';
- if(y<8 && x<0.12) return 'LOW';
- if(x>0.50+0.48*Math.pow(clamp(y/100,0,1),1.4)) return 'FI';
+ if(j===0)return 'OFF';
+ if(x>=1)return 'LIMIT';
  const b=boundaries(x);
- if(x<0.72 && y<b.brTop) return 'FI';
- if(x<0.72 && y<b.brBottom) return 'BR';
- if(y<b.ud) return 'FT';
+ if(y>b.envelope||x>geometry.envelopeEnd)return 'OUT';
+ if(x<=geometry.lowEnd&&y<b.low)return 'LOW';
+ if(x>=geometry.fiStart&&y<b.fiTop)return 'FI';
+ if(x<=geometry.junction&&y<b.brBottom)return 'BR';
+ if(y<b.ud)return 'FT';
  return 'UD';
 }
 export function state(p,dynamic={}) {
@@ -82,7 +93,7 @@ export function state(p,dynamic={}) {
  const side=Math.max(0,q.current-deposited),bubble=side/(q.current||1)*(1-0.7*q.wetting/100);
  const warnings=[];
  if(ratio>=1) warnings.push('Metallzufuhr reicht für die vorgegebene Stromdichte nicht aus. Nebenreaktionen werden im Lehrmodell zusammengefasst; außerhalb des Diagrammkerns.');
- if(ratio>1.4) warnings.push('Punkt liegt rechts außerhalb der Zeichenfläche (j/jgrenz > 1,4); Randdreieck und Zahlenwert beachten.');
+ if(ratio>1) warnings.push('Die Karte endet bei j/jgrenz = 1. Die Gesamtstromvorgabe liegt darüber und wird mit ihrem tatsächlichen Zahlenwert am rechten Rand markiert.');
  if(c<0.01) warnings.push('Bad nahezu erschöpft: Modell außerhalb des vorgesehenen Konzentrationsbereichs.');
  if(q.current===0) warnings.push('Strom ausgeschaltet: kein Schichtwachstum. Die Hemmungskoordinate ist nur ein Modellwert.');
  return {ratio,inhibition:y,limit,free:e.free,available:e.available,coverage:cover,concentration:c,transport:k,ph,efficiency:deposited/(q.current||1),rate,side,bubble,type:classify(ratio,y,q.current),warnings};
@@ -128,10 +139,13 @@ t+=dt;record(s,index+1);
  return {records,layers,mode,totalTime:t,thickness,final:{...p}};
 }
 export function validateSession(data) {
- if(!data||data.version!==VERSION||!Array.isArray(data.states)||data.states.length<1||data.states.length>50||!Array.isArray(data.steps)||data.steps.length>20)throw Error('Unbekannte Projektdatei oder zu viele Zustände/Schritte.');
+ if(!data||![1,VERSION].includes(data.version)||!Array.isArray(data.states)||data.states.length<1||data.states.length>50||!Array.isArray(data.steps)||data.steps.length>20)throw Error('Unbekannte Projektdatei oder zu viele Zustände/Schritte.');
  data.states.forEach(s=>{if(typeof s.name!=='string'||s.name.length>80)throw Error('Ungültige Zustandsbezeichnung.');validate(s.p);});
  data.steps.forEach(validateStep);
  if(!['compare','process'].includes(data.mode)||!['path','time'].includes(data.processMode)||!Number.isInteger(data.active)||data.active<0||data.active>=data.states.length)throw Error('Ungültige Ansicht.');
- return data;
+ const processStart=data.version===1?0:data.processStart;
+ if(!Number.isInteger(processStart)||processStart<0||processStart>=data.states.length)throw Error('Ungültiger Prozessstart.');
+ if(data.mode==='process'&&data.steps.some(s=>fields[s.parameter][5]>data.states[processStart].p.level))throw Error('Prozessstart benötigt eine höhere Komplexitätsebene.');
+ const states=data.states.map(s=>({name:data.version===1&&/^Ausgangszustand(?: · Kopie)*$/.test(s.name)?'':s.name,p:{...s.p}}));
+ return {...data,states,version:VERSION,processStart,monochrome:data.monochrome!==false};
 }
-

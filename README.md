@@ -28,8 +28,17 @@ node --check app.js
 
 Den Ordner mit einem lokalen HTTP-Server ausliefern, beispielsweise `python -m http.server 8080`, und im Browser öffnen. ES-Module benötigen einen HTTP-Ursprung; ein direktes Öffnen von index.html als file:// ist nicht vorgesehen.
 
-Der Werkzeugdeck-Katalog veröffentlicht die fünf Browserdateien `index.html`, `style.css`, `app.js`, `model.js`, `render.js` aus einer festgeschriebenen Git-Revision.
+Der Werkzeugdeck-Katalog veröffentlicht die sechs Browserdateien `index.html`, `style.css`, `app.js`, `model.js`, `render.js`, `workspace.js` aus einer festgeschriebenen Git-Revision.
 
 ## Daten und Projekt
 
 Alle Berechnungen und Exporte erfolgen auf dem Gerät im Browser. Keine externen Bibliotheken, Analyseanbieter, KI-Anfragen oder automatische dauerhafte Speicherung. Beim Hosting erhält Cloudflare technisch notwendige Verbindungsdaten. Privates Projekt in Entwicklung. Code und Texte entstanden mit KI-Unterstützung. Für Richtigkeit und Eignung wird keine Garantie übernommen; gesetzliche Haftungsregeln bleiben unberührt.
+
+## Überarbeitete Karte und Zustandsbedienung
+
+- Quadratische Karte mit x-Achse oben und wachsender Inhibierung nach unten. Der Bereich endet bei j/jgrenz = 1; höhere Gesamtstromvorgaben erscheinen als Randdreieck mit tatsächlichem Zahlenwert.
+- Referenzähnliche schematische Geometrie aus gemeinsamen Grenzfunktionen für Zuordnung, Füllung, Trennlinien und geprüfte Labelpositionen. Die Geometrie ist keine quantitative Anpassung experimenteller Grenzkurven.
+- Standardmäßig druckfreundliche Vektorschraffuren; Farbe lässt sich optional einschalten. PNG und SVG übernehmen denselben Darstellungszustand.
+- „Neuen Zustand anlegen“ erzeugt einen unabhängigen Schnappschuss. Namen: Ausgangszustand, Zustand 2, Zustand 3 usw. Kurzzeichen: AZ, Z2, Z3, …, EZ für den letzten Vergleichszustand. Zwischenzustände bleiben editierbar; zusätzliche Namen sind optional.
+- Die Simulation hat einen getrennt gewählten festen Startzustand. Der laufende Punkt ist eine Raute und überschreibt keine gespeicherten Zustände. Änderungen am gewählten Startzustand berechnen den Prozess neu; die reine Editor-Auswahl oder das Ändern anderer Zustände ändert seinen Start nicht.
+- Projektformat v2 speichert Prozessstart und Druckansicht. v1-Dateien bleiben importierbar und werden zunächst an AZ gebunden.

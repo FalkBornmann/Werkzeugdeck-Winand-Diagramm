@@ -63,3 +63,8 @@ Bei aktivem Simulationsverlauf läuft die Zeitsteuerung am unteren Bildschirmran
 ## Eigene Zustände als Prozesspunkte
 
 Unter „Prozessvorgabe → Aus gespeicherten Zuständen“ verbindet die Simulation alle Punkte in ihrer Reihenfolge AZ → Z2 → … → EZ. Dauer und Verlauf werden je Übergang gewählt. Numerische Bedingungen ändern sich gleichzeitig; Wirkmodelle wechseln bei Rampen am Zielpunkt. Metall und Komplexität müssen übereinstimmen. Dynamische Grundeinstellungen (Fläche, Volumen, Zeitkonstanten, Badbilanz) stammen für den gesamten Prozess aus AZ. Der gemeinsame Integrator erhält die dynamische Vorgeschichte über alle Übergänge. Gespeicherte Vorgaben bleiben unabhängig; im Zeitmodell können Verzögerung und Metallverbrauch zu Abweichungen vom Zielpunkt führen. Projektformat v4 speichert Prozessvorgabe und Übergänge; v1–v3 öffnen weiterhin mit Parameterschritten.
+
+## Fachtheorie und einheitliche Bedienung
+[Fachtheorie öffnen](https://werkzeugdeck.pages.dev/bereiche/elektrochemie/theorie/) · [Design- und Exportvorgaben](https://github.com/FalkBornmann/Werkzeugdeck/blob/main/docs/DESIGN.md)
+Das gemeinsame Exportmenü bietet Darstellung, Dateityp und Speichern. PNG ist vorausgewählt; SVG enthält skalierbare Vektoren und Text.
+Zeitabhängige Darstellungen können zusätzlich als lokales Video (WebM beziehungsweise MP4 nach Browserunterstützung) gespeichert werden. Die Filmlänge ist wählbar. Eingaben werden während der Aufnahme gesperrt; Abbrechen und Abschluss stellen den vorherigen Zeitpunkt wieder her.

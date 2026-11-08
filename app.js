@@ -1,8 +1,10 @@
+import {mountTimelineDock} from './timeline-dock.js';
 import {defaults,presets,fields,metals,state,simulate,scenarios,validate,validateSession,VERSION,morphologyInfo,surfaceInfo,choices} from './model.js';
 import {StateBook,stateCode,stateName,stateTitle} from './workspace.js';
 import {escape,diagramSVG,morphologySVG,historySVG,surfaceSVG,names,descriptions} from './render.js';
 const $=id=>document.getElementById(id),fmt=(v,d=2)=>Number(v).toLocaleString('de-DE',{maximumFractionDigits:d});
 let book=new StateBook(),mode='compare',processMode='path',steps=[{parameter:'transport',target:70,duration:180,ramp:'linear'}],process=null,index=0,timer=null,monochrome=true;
+const timelineDock = mountTimelineDock(document.getElementById('time-controls'));
 const dynamicKeys=['area','volume','transportTau','adsorptionTau'];
 const report=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'';};
 const label=i=>stateTitle(book.states[i],i,book.states.length);
@@ -36,10 +38,11 @@ function recompute(reset=true){
   process=mode==='process'?simulate(book.origin(),steps,processMode):null;
   index=reset?0:Math.min(index,(process?.records.length||1)-1);$('timeline').max=(process?.records.length||1)-1;$('timeline').value=index;
   $('stateRows').innerHTML=book.states.map((s,i)=>`<tr class="${i===book.active?'selected':''}"><td><button data-select="${i}">${escape(label(i))}</button></td><td>${metals[s.p.metal].name} / ${s.p.level}</td><td>${fmt(s.p.current)}</td><td>${fmt(s.result.limit,3)}</td><td>${fmt(s.result.ratio,3)}</td><td>${fmt(s.result.inhibition,1)}</td><td>${escape(names[s.result.type])}</td></tr>`).join('');
-  report('');document.querySelectorAll('[data-export],#csv,#save,#play').forEach(b=>b.disabled=false);render();
- }catch(e){process=null;report(e.message,true);document.querySelectorAll('[data-export],#csv,#save,#play').forEach(b=>b.disabled=true);$('warnings').textContent='Eingaben und Prozessstart prüfen. Die letzte gültige Darstellung bleibt bis zur Korrektur eingefroren.';}
+  report('');document.querySelectorAll('[data-export],#csv,#save,#play,#timeline,#rewind').forEach(b=>b.disabled=false);render();
+ }catch(e){process=null;timelineDock.setActive(false);report(e.message,true);document.querySelectorAll('[data-export],#csv,#save,#play,#timeline,#rewind').forEach(b=>b.disabled=true);$('warnings').textContent='Eingaben und Prozessstart prüfen. Die letzte gültige Darstellung bleibt bis zur Korrektur eingefroren.';}
 }
 function render(){
+ timelineDock.setActive(mode === 'process' && !!process);
  const rec=process?.records[index],s=rec||book.states[book.active].result,p=rec?.p||book.states[book.active].p;
  $('diagram').innerHTML=diagramSVG(book.states,book.active,process,index,{monochrome});
  const displayLabel=rec?`Simulation · ${fmt(rec.t,1)} s · Start ${stateCode(book.processStart,book.states.length)}`:label(book.active);
@@ -55,7 +58,7 @@ function render(){
  const metrics=[['i/i<sub>grenz</sub>',fmt(s.ratio,3)],['Inhibierung (Modellskala)',fmt(s.inhibition,1)],['i<sub>grenz</sub> / (A/dm²)',fmt(s.limit,3)],['Metallstromausbeute / %',p.current===0?'—':fmt(s.efficiency*100,1)],['Freier Modellanteil / %',fmt(s.free*100,1)],['Metall gesamt / (mol/L)',fmt(s.concentration,3)],['Wachstumsrate / (µm/min)',fmt(s.rate*60,3)],['Blasen-/Porentendenz / % (Modell)',fmt(s.bubble*100,1)]];
  $('metrics').innerHTML=metrics.map(([k,v])=>`<div><span>${k}</span><strong>${v}</strong></div>`).join('');
  $('warnings').textContent=s.warnings.join(' ')||'Die Karte ist schematisch. Schraffuren und Trennlinien kennzeichnen die Gebiete auch ohne Farbe; außerhalb der Referenzgebiete erfolgt keine Zuordnung.';
- if(process){$('timeLabel').textContent=`${fmt(rec.t,1)} / ${fmt(process.totalTime,0)} s · Schritt ${rec.step} · ${processMode==='time'?'Zeitmodell':'Parameterpfad'}`;
+ if(process){$('timeline').setAttribute('aria-valuetext',fmt(rec.t,1)+' von '+fmt(process.totalTime,0)+' Sekunden');$('timeLabel').textContent=`${fmt(rec.t,1)} / ${fmt(process.totalTime,0)} s · Schritt ${rec.step} · ${processMode==='time'?'Zeitmodell':'Parameterpfad'}`;
  $('processSummary').textContent=processMode==='time'?`Aktuell ${fmt(rec.thickness,3)} µm · am Prozessende ${fmt(process.thickness,3)} µm. Aktuelle Modellzuordnung: ${names[s.type]}. Vorhandene Lagen und gespeicherte Vergleichszustände bleiben erhalten.`:'Quasistationärer Pfad: Zwischenzustände erreichen sofort ihre Modellwerte. Die Raute ist ein Simulationspunkt, kein gespeicherter Vergleichszustand.';
  if(processMode==='time')$('history').innerHTML=historySVG(process,index);}
 }

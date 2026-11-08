@@ -1,4 +1,4 @@
-export const VERSION = 3;
+export const VERSION = 4;
 export const F = 96485.33212;
 export const metals = {
   copper: {name:'Kupfer', z:2, M:0.063546, rho:8960, D:0.72e-9, baseline:0.10},
@@ -198,14 +198,20 @@ export function validateStep(s) {
 export function simulate(start,steps,mode='path') {
  validate(start); if(!Array.isArray(steps)||steps.length>20||!['path','time'].includes(mode)) throw Error('Ungültiger Prozess.');steps.forEach(validateStep);
  if(steps.some(s=>fields[s.parameter][5]>start.level)) throw Error('Für diesen Prozess eine höhere Komplexitätsebene wählen.');
+ return runProcess(start,steps.map(({parameter,target,duration,ramp})=>({parameter,target,duration,ramp})),mode);
+}
+// Both input styles share one integrator so time, adsorption and layer history remain continuous.
+function runProcess(start,steps,mode){
  let p={...start},dyn={concentration:p.concentration,transport:p.transport,coverage:equilibrium(p).coverage,wetCoverage:equilibrium(p).wetCoverage,ph:p.level===3?state(p).ph:effective(p).ph};
  let t=0,thickness=0,removed=0;const records=[],layers=[];
  const record=(s,step)=>records.push({t,thickness,step,p:{...p},...s});
  record(state(p),0);
  steps.forEach((step,index)=>{
-  const from=p[step.parameter],n=Math.max(40,Math.ceil(step.duration/0.5)),dt=step.duration/n;
+  const from={...p},targets=step.targets||{[step.parameter]:step.target},n=Math.max(40,Math.ceil(step.duration/0.5)),dt=step.duration/n;
   for(let i=1;i<=n;i++){
-   p[step.parameter]=step.ramp==='hold'?from:step.ramp==='jump'?step.target:from+(step.target-from)*i/n;
+   for(const [key,target] of Object.entries(targets)){
+    p[key]=step.ramp==='hold'?from[key]:step.ramp==='jump'?target:choices[key]?(i===n?target:from[key]):from[key]+(target-from[key])*i/n;
+   }
    const eq=equilibrium(p);
    if(mode==='time'){
     const relax=(old,target,tau)=>target+(old-target)*Math.exp(-dt/Math.max(tau,1e-8));
@@ -227,19 +233,45 @@ export function simulate(start,steps,mode='path') {
    if(mode==='time' && p.closed){dyn.concentration=Math.max(0,p.concentration-removed);s=state(p,dyn);}
 t+=dt;record(s,index+1);
   }
-  if(step.ramp==='hold')p[step.parameter]=from;
+  if(step.ramp==='hold')Object.assign(p,from);
  });
  return {records,layers,mode,totalTime:t,thickness,final:{...p}};
 }
+
+export function validateTransition(s){
+ if(!s||!Number.isFinite(s.duration)||s.duration<1||s.duration>3600||!['linear','jump'].includes(s.ramp))throw Error('Übergang: Dauer 1–3600 s und Rampe oder Sprung erforderlich.');
+ return s;
+}
+export function simulateStates(states,transitions,mode='path'){
+ if(!Array.isArray(states)||states.length<2||states.length>50)throw Error('Für einen Zustandsprozess mindestens zwei gespeicherte Zustände anlegen.');
+ states.forEach(s=>validate(s.p));
+ if(!Array.isArray(transitions)||transitions.length!==states.length-1||!['path','time'].includes(mode))throw Error('Für jeden Zustandsübergang ist eine Dauer und ein Verlauf erforderlich.');
+ transitions.forEach(validateTransition);
+ const start=states[0].p;
+ if(states.some(s=>s.p.metal!==start.metal||s.p.level!==start.level))throw Error('Ein zusammenhängender Zustandsprozess benötigt dasselbe Metall und dieselbe Komplexitätsebene in allen Zuständen.');
+ const keys=Object.keys(fields).filter(k=>!['area','volume','transportTau','adsorptionTau'].includes(k)&&fields[k][5]<=start.level);
+ const steps=transitions.map((s,i)=>({...s,targets:Object.fromEntries(keys.map(k=>[k,states[i+1].p[k]]))}));
+ return {...runProcess(start,steps,mode),source:'states'};
+}
+
 export function validateSession(data) {
- if(!data||![1,2,VERSION].includes(data.version)||!Array.isArray(data.states)||data.states.length<1||data.states.length>50||!Array.isArray(data.steps)||data.steps.length>20)throw Error('Unbekannte Projektdatei oder zu viele Zustände/Schritte.');
+ if(!data||![1,2,3,VERSION].includes(data.version)||!Array.isArray(data.states)||data.states.length<1||data.states.length>50||!Array.isArray(data.steps)||data.steps.length>20)throw Error('Unbekannte Projektdatei oder zu viele Zustände/Schritte.');
  const normalizedStates=data.states.map(s=>({...s,p:data.version<3?{...defaults,...s.p}:s.p}));
  normalizedStates.forEach(s=>{if(typeof s.name!=='string'||s.name.length>80)throw Error('Ungültige Zustandsbezeichnung.');validate(s.p);});
  data.steps.forEach(validateStep);
  if(!['compare','process'].includes(data.mode)||!['path','time'].includes(data.processMode)||!Number.isInteger(data.active)||data.active<0||data.active>=data.states.length)throw Error('Ungültige Ansicht.');
  const processStart=data.version===1?0:data.processStart;
  if(!Number.isInteger(processStart)||processStart<0||processStart>=data.states.length)throw Error('Ungültiger Prozessstart.');
- if(data.mode==='process'&&data.steps.some(s=>fields[s.parameter][5]>normalizedStates[processStart].p.level))throw Error('Prozessstart benötigt eine höhere Komplexitätsebene.');
+ const processSource=data.version<4?'steps':data.processSource;
+ if(!['steps','states'].includes(processSource))throw Error('Ungültige Prozessvorgabe.');
+ const transitions=data.version<4?normalizedStates.slice(1).map(()=>({duration:60,ramp:'linear'})):data.transitions;
+ if(!Array.isArray(transitions)||transitions.length!==normalizedStates.length-1)throw Error('Ungültige Zustandsübergänge.');
+ transitions.forEach(validateTransition);
+ if(data.mode==='process'&&processSource==='states') {
+  if(normalizedStates.length<2)throw Error('Mindestens zwei Zustände erforderlich.');
+  if(normalizedStates.some(s=>s.p.metal!==normalizedStates[0].p.metal||s.p.level!==normalizedStates[0].p.level))throw Error('Zustandsprozess benötigt dasselbe Metall und dieselbe Komplexitätsebene.');
+ }
+ if(data.mode==='process'&&processSource==='steps'&&data.steps.some(s=>fields[s.parameter][5]>normalizedStates[processStart].p.level))throw Error('Prozessstart benötigt eine höhere Komplexitätsebene.');
  const states=normalizedStates.map(s=>({name:data.version===1&&/^Ausgangszustand(?: · Kopie)*$/.test(s.name)?'':s.name,p:{...s.p}}));
- return {...data,states,version:VERSION,processStart,monochrome:data.monochrome!==false};
+ return {...data,states,version:VERSION,processSource,transitions:transitions.map(s=>({...s})),processStart,monochrome:data.monochrome!==false};
 }

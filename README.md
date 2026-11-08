@@ -28,7 +28,7 @@ node --check app.js
 
 Den Ordner mit einem lokalen HTTP-Server ausliefern, beispielsweise `python -m http.server 8080`, und im Browser öffnen. ES-Module benötigen einen HTTP-Ursprung; ein direktes Öffnen von index.html als file:// ist nicht vorgesehen.
 
-Der Werkzeugdeck-Katalog veröffentlicht die sechs Browserdateien `index.html`, `style.css`, `app.js`, `model.js`, `render.js`, `workspace.js` aus einer festgeschriebenen Git-Revision.
+Der Werkzeugdeck-Katalog veröffentlicht die acht Browserdateien `index.html`, `style.css`, `app.js`, `model.js`, `render.js`, `workspace.js`, `timeline-dock.js`, `timeline-dock.css` aus einer festgeschriebenen Git-Revision.
 
 ## Daten und Projekt
 
@@ -59,3 +59,7 @@ Eine zusätzliche schematische Draufsicht illustriert Körnung, mögliche Blasen
 
 ## Zeitsteuerung
 Bei aktivem Simulationsverlauf läuft die Zeitsteuerung am unteren Bildschirmrand mit. Derselbe Regler steuert alle Grafiken. Die vorhandenen Wiedergabe- und Positionsfunktionen sind auch beim Betrachten weiter unten liegender Diagramme erreichbar. Die Leiste passt sich Mobilgeräten an und lässt sich mit Tastatur und Touch bedienen.
+
+## Eigene Zustände als Prozesspunkte
+
+Unter „Prozessvorgabe → Aus gespeicherten Zuständen“ verbindet die Simulation alle Punkte in ihrer Reihenfolge AZ → Z2 → … → EZ. Dauer und Verlauf werden je Übergang gewählt. Numerische Bedingungen ändern sich gleichzeitig; Wirkmodelle wechseln bei Rampen am Zielpunkt. Metall und Komplexität müssen übereinstimmen. Dynamische Grundeinstellungen (Fläche, Volumen, Zeitkonstanten, Badbilanz) stammen für den gesamten Prozess aus AZ. Der gemeinsame Integrator erhält die dynamische Vorgeschichte über alle Übergänge. Gespeicherte Vorgaben bleiben unabhängig; im Zeitmodell können Verzögerung und Metallverbrauch zu Abweichungen vom Zielpunkt führen. Projektformat v4 speichert Prozessvorgabe und Übergänge; v1–v3 öffnen weiterhin mit Parameterschritten.

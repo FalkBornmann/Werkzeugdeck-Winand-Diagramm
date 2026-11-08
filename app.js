@@ -1,3 +1,4 @@
+import './export-menu.js';
 import {mountTimelineDock} from './timeline-dock.js';
 import {defaults,presets,fields,metals,state,simulate,simulateStates,scenarios,validate,validateSession,VERSION,morphologyInfo,surfaceInfo,choices} from './model.js';
 import {StateBook,stateCode,stateName,stateTitle} from './workspace.js';
@@ -124,3 +125,26 @@ $('save').onclick=()=>{stop();download(new Blob([JSON.stringify({version:VERSION
 $('open').onchange=async()=>{const file=$('open').files[0];if(!file)return;try{if(file.size>250000)throw Error('Projektdatei zu groß (maximal 250 kB).');const data=validateSession(JSON.parse(await file.text()));stop();book=new StateBook(data.states,data.active,data.processStart);mode=data.mode;processMode=data.processMode;processSource=data.processSource;transitions=data.transitions.map(s=>({...s}));steps=data.steps.map(s=>({...s}));monochrome=data.monochrome;controls();recompute();report('Projekt geladen; Ergebnisse wurden mit dem aktuellen Lehrmodell neu berechnet.');}catch(e){report('Import abgelehnt: '+e.message,true);}finally{$('open').value='';}};
 $('csv').onclick=()=>{stop();const quote=v=>'"'+String(v).replaceAll('"','""')+'"',num=v=>String(v).replace('.',',');const header=['Zustand','Zeit_s','Schritt','Metall','Ebene','j_A_dm2','c_mol_L','km_um_s','jgrenz_A_dm2','j_durch_jgrenz','Inhibierung_rel_Prozent','Typ','Dicke_um','Metallstromausbeute','pH_Modell','Uebergang_Lehrhinweis','Spitzenwachstum_Lehrhinweis','jMetall_A_dm2','jH2_A_dm2','Blasenblockierung','pH_Filmindex','Porentendenz','Rauheit_rel','Glanz_Tendenz'];const rows=process?process.records.map(r=>['Simulation ab '+label(originIndex()),r.t,r.step,metals[r.p.metal].name,r.p.level,r.p.current,r.concentration,r.transport,r.limit,r.ratio,r.inhibition,r.type,processMode==='time'?r.thickness:'',r.efficiency,r.ph,morphologyInfo(r).transition?.key||'',morphologyInfo(r).growthTitle||'',r.metalCurrent,r.hydrogenCurrent,r.bubbleCoverage,r.film,surfaceInfo(r).pits,surfaceInfo(r).roughness,surfaceInfo(r).gloss]):book.states.map((s,i)=>[label(i),'','',metals[s.p.metal].name,s.p.level,s.p.current,s.result.concentration,s.result.transport,s.result.limit,s.result.ratio,s.result.inhibition,s.result.type,'',s.result.efficiency,s.result.ph,morphologyInfo(s.result).transition?.key||'',morphologyInfo(s.result).growthTitle||'',s.result.metalCurrent,s.result.hydrogenCurrent,s.result.bubbleCoverage,s.result.film,surfaceInfo(s.result).pits,surfaceInfo(s.result).roughness,surfaceInfo(s.result).gloss]);download(new Blob(['\ufeff'+[header,...rows].map(row=>row.map(v=>quote(typeof v==='number'?num(v):v)).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'winand-werte.csv');report('Werte exportiert. Vollständige Vorgaben über „Projekt speichern“ sichern.');};
 controls();recompute();
+
+WDExports.mount({
+  anchor: document.querySelector('[data-export="diagram"]').parentElement,
+  defaultItem: 'diagram',
+  legacyButtons: [...document.querySelectorAll('[data-export]')],
+  items: [['diagram','Winand-Diagramm'],['surface','Oberflächenansicht'],['morphology','Gefügeskizze'],['history','Schichthistorie']].map(([id,label]) => ({
+    id, label,
+    enabled: () => !document.querySelector('[data-export="'+id+'"]').disabled && (id !== 'history' || !!process && processMode === 'time'),
+    videoReady: () => !!process && (id !== 'history' || processMode === 'time'),
+    save: format => exportGraphic(id, format),
+    video: () => {
+      stop();
+      if (!process) throw new Error('Zuerst in den Simulationsmodus wechseln.');
+      const previous = index, last = process.records.length - 1;
+      return {
+        title: 'Winand-Diagramm · ' + label, color: '#163e50',
+        frame: fraction => { index = Math.round(fraction * last); $('timeline').value = index; render(); return $(id).querySelector('svg'); },
+        caption: () => $('timeLabel').textContent,
+        restore: () => { index = previous; $('timeline').value = index; render(); }
+      };
+    }
+  }))
+});
